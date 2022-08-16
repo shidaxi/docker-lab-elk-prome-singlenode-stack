@@ -1,0 +1,53 @@
+version: '2'
+services:
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
+    environment:
+      node.name: es
+      bootstrap.memory_lock: "true"
+      discovery.type: single-node
+      #ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - '9200:9200'
+    mem_limit: 1000m
+    networks:
+      labnet1:
+        ipv4_address: 172.16.1.2
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.13.1
+    ports:
+      - '5601:5601'
+    environment:
+      ELASTICSEARCH_HOSTS: http://es:9200
+    networks:
+      labnet1:
+    depends_on:
+      - es
+    mem_limit: 300m
+  filebeat:
+    user: root
+    image: docker.elastic.co/beats/filebeat:7.13.1
+    volumes:
+      - /var/run/docker.sock:/host_docker/docker.sock
+      - /var/lib/docker:/host_docker/var/lib/docker
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./nginxlb/logs:/tmp/nginxlb/logs
+      - ./nginx1/logs:/tmp/nginx1/logs
+    command: ["--strict.perms=false"]
+    networks:
+      labnet1:
+    depends_on:
+      - es
+    mem_limit: 300m
+
+volumes:
+  es_data: {}

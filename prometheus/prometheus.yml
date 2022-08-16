@@ -1,0 +1,59 @@
+global:
+  scrape_interval:     5s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'docker-host-alpha'
+
+rule_files:
+  - alert.rules
+
+scrape_configs:
+  - job_name: 'nodeexporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets:
+      - nodeexporter:9100
+
+  - job_name: 'cadvisor'
+    scrape_interval: 5s
+    static_configs:
+    - targets:
+      - cadvisor:8080
+
+  - job_name: 'nginx'
+    scrape_interval: 5s
+    static_configs:
+    - targets:
+      - nginxlbexporter:9113
+      - nginx1exporter:9113
+      - nginx2exporter:9113
+
+  - job_name: 'actuator'
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    static_configs:
+    - targets:
+      - boota:9090
+      - bootb:9090
+
+  - job_name: 'netstat'
+    scrape_interval: 5s
+    metrics_path: /tcp_status
+    static_configs:
+    - targets:
+      - nginxlb:80
+      - nginx1:80
+      - nginx2:80
+
+  - job_name: 'prometheus'
+    scrape_interval: 10s
+    static_configs:
+    - targets:
+      - localhost:9090
+
+alerting:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets: 
+      - alertmanager:9093

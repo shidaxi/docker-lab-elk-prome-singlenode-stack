@@ -1,0 +1,89 @@
+version: '2'
+
+services:
+  nginxlb: &nginx
+    hostname: nginxlb
+    #image: nginx:alpine
+    image: openresty/openresty:1.21.4.1-alpine-fat
+    environment:
+      SERVER_PORT: 80
+    ports:
+      - "8080:80"
+    #sysctls:
+    #  sys.net.ipv4.tcp_tw_reuse: 1
+    networks:
+      labnet1:
+        ipv4_address: 172.16.1.10
+    volumes:
+      - ./nginxlb/nginx.conf:/etc/nginx/nginx.conf:ro # for nginx
+      - ./nginxlb/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro # for openresty
+      - ./nginxlb/logs:/var/logs/nginx:rw
+      - ./tcp_stat.sh:/tcp_stat.sh
+    ulimits:
+      nofile:
+        soft: 10000
+        hard: 50000
+    expose:
+      - 80
+    mem_limit: 100m
+    mem_reservation: 50m
+    labels:
+      org.label-schema.group: "monitoring"
+    depends_on:
+      - nginx1
+      - nginx2
+  nginx1:
+    <<: *nginx
+    hostname: nginx1
+    ports: []
+    volumes:
+      - ./nginx1/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx1/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro # for openresty
+      - ./nginx1/logs:/var/logs/nginx:rw
+      - ./tcp_stat.sh:/tcp_stat.sh
+    networks:
+      labnet1:
+        ipv4_address: 172.16.1.11
+    depends_on:
+      - boota
+      - bootb
+  nginx2:
+    <<: *nginx
+    hostname: nginx2
+    ports: []
+    volumes:
+      - ./nginx2/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx2/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro # for openresty
+      - ./nginx2/logs:/var/logs/nginx:rw
+      - ./tcp_stat.sh:/tcp_stat.sh
+    networks:
+      labnet1:
+        ipv4_address: 172.16.1.12
+    depends_on:
+      - boota
+      - bootb
+  nginxlbexporter: &nginx-exporter
+    image: nginx/nginx-prometheus-exporter:0.10.0
+    environment:
+      SCRAPE_URI: http://nginxlb/stub_status
+    restart: on-failure
+    expose:
+      - 9113
+    networks:
+      labnet1: {}
+    depends_on:
+      - nginxlb
+      - nginx1
+      - nginx2
+    mem_limit: 100m
+    mem_reservation: 50m
+    labels:
+      org.label-schema.group: "monitoring"
+  nginx1exporter:
+    <<: *nginx-exporter
+    environment:
+      SCRAPE_URI: http://nginx1/stub_status
+  nginx2exporter:
+    <<: *nginx-exporter
+    environment:
+      SCRAPE_URI: http://nginx2/stub_status

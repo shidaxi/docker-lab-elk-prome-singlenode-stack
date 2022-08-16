@@ -1,0 +1,19 @@
+version: '2'
+
+# nginxlb -> nginx1 -> boota(springboot)
+
+services:
+  wrk:
+    container_name: wrk
+    image: bootjp/wrk2
+    command:
+      - sleep
+      - infinity
+    networks:
+      labnet1:
+
+networks:
+  labnet1:
+    ipam:
+      config:
+        - subnet: 172.16.1.0/24

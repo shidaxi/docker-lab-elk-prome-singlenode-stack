@@ -1,0 +1,37 @@
+version: '2'
+
+services:
+  boota: &boot
+    hostname: boota
+    image: maven:3.8-openjdk-11-slim
+    environment:
+      server.port: 8080
+      management.server.port: 9090
+      management.endpoints.web.exposure.include: '*'
+    entrypoint: ["mvn", "spring-boot:run"]
+    working_dir: /opt/app
+    networks:
+      labnet1:
+        ipv4_address: 172.16.1.21
+    volumes:
+      - ./bootdemo:/opt/app:ro
+      - $HOME/.m2:/root/.m2:rw
+    ulimits:
+      nofile:
+        soft: 10000
+        hard: 50000
+    expose:
+      - 8080
+      - 9090
+    mem_limit: 500m
+    mem_reservation: 400m
+    labels:
+      org.label-schema.group: "monitoring"
+  bootb:
+    <<: *boot
+    hostname: bootb
+    networks:
+      labnet1:
+        ipv4_address: 172.16.1.22
+    depends_on:
+      - boota
